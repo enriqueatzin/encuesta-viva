@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encuesta de inflación</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #181b22;
+    --border: #2a2e38;
+    --text: #e8eaed;
+    --text-muted: #9aa0ac;
+    --accent: #5b8def;
+    --accent-soft: rgba(91, 141, 239, 0.18);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 32px 16px;
+  }
+  .container {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.4rem;
+    line-height: 1.4;
+    margin: 0 0 24px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .field {
+    margin-bottom: 16px;
+  }
+  input[type="text"],
+  input[type="number"] {
+    width: 100%;
+    background: #10131a;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 1rem;
+  }
+  input[type="text"]:focus,
+  input[type="number"]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { background: #4a7bd9; }
+  #mensaje {
+    margin-top: 12px;
+    font-size: 0.88rem;
+    color: var(--accent);
+    min-height: 1.2em;
+  }
+  .stats {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .stat {
+    flex: 1;
+    min-width: 120px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat .valor {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat .etiqueta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .hist-fila {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+  }
+  .hist-etiqueta {
+    width: 70px;
+    flex-shrink: 0;
+    color: var(--text-muted);
+    text-align: right;
+  }
+  .hist-barra-contenedor {
+    flex: 1;
+    background: #10131a;
+    border-radius: 6px;
+    overflow: hidden;
+    height: 22px;
+  }
+  .hist-barra {
+    height: 100%;
+    background: var(--accent-soft);
+    border-right: 2px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 6px;
+    min-width: 2px;
+    transition: width 0.3s ease;
+  }
+  .hist-count {
+    font-size: 0.75rem;
+    color: var(--text);
+  }
+  h2 {
+    font-size: 1.05rem;
+    margin: 0 0 16px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>¿Cuál será la inflación anual de México en septiembre de 2026, según INEGI?</h1>
+
+  <div class="card">
+    <form id="formulario">
+      <div class="field">
+        <label for="alias">Alias (opcional)</label>
+        <input type="text" id="alias" placeholder="Anónimo">
+      </div>
+      <div class="field">
+        <label for="valor">Tu estimación (% anual)</label>
+        <input type="number" id="valor" step="0.1" required placeholder="Ej. 4.2">
+      </div>
+      <button type="submit">Enviar</button>
+      <div id="mensaje"></div>
+    </form>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="valor" id="numRespuestas">0</div>
+      <div class="etiqueta">Respuestas</div>
+    </div>
+    <div class="stat">
+      <div class="valor" id="mediana">0</div>
+      <div class="etiqueta">Mediana</div>
+    </div>
+    <div class="stat">
+      <div class="valor" id="promedio">0</div>
+      <div class="etiqueta">Promedio</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Distribución de respuestas</h2>
+    <div id="histograma"></div>
+  </div>
+</div>
+
+<script>
+  const RESPUESTAS_INICIALES = [
+    { alias: "Ana",      valor: 4.1 },
+    { alias: "Luis",     valor: 3.8 },
+    { alias: "Mariana",  valor: 4.5 },
+    { alias: "Carlos",   valor: 5.0 },
+    { alias: "Diana",    valor: 4.2 },
+    { alias: "Jorge",    valor: 3.6 },
+    { alias: "Paola",    valor: 4.8 },
+    { alias: "Anónimo",  valor: 4.3 },
+    { alias: "Sofía",    valor: 5.3 },
+    { alias: "Ricardo",  valor: 4.0 },
+    { alias: "Valeria",  valor: 3.9 },
+    { alias: "Anónimo",  valor: 4.6 },
+    { alias: "Héctor",   valor: 4.4 },
+    { alias: "Fernanda", valor: 5.1 },
+    { alias: "Anónimo",  valor: 3.7 },
+    { alias: "Ismael",   valor: 4.2 },
+    { alias: "Renata",   valor: 4.9 },
+    { alias: "Pablo",    valor: 4.1 },
+    { alias: "Camila",   valor: 5.5 },
+    { alias: "Anónimo",  valor: 4.3 }
+  ];
+
+  let respuestas = [...RESPUESTAS_INICIALES];
+
+  const formulario = document.getElementById("formulario");
+  const inputAlias = document.getElementById("alias");
+  const inputValor = document.getElementById("valor");
+  const mensaje = document.getElementById("mensaje");
+
+  function calcularMediana(valores) {
+    const ordenado = [...valores].sort((a, b) => a - b);
+    const n = ordenado.length;
+    const mitad = Math.floor(n / 2);
+    if (n % 2 === 0) {
+      return (ordenado[mitad - 1] + ordenado[mitad]) / 2;
+    }
+    return ordenado[mitad];
+  }
+
+  function calcularPromedio(valores) {
+    const suma = valores.reduce((acc, v) => acc + v, 0);
+    return suma / valores.length;
+  }
+
+  function construirHistograma(valores) {
+    const anchoBin = 0.5;
+    const min = Math.floor(Math.min(...valores) / anchoBin) * anchoBin;
+    const max = Math.ceil(Math.max(...valores) / anchoBin) * anchoBin;
+
+    const bins = [];
+    for (let inicio = min; inicio < max; inicio += anchoBin) {
+      bins.push({ inicio, fin: inicio + anchoBin, conteo: 0 });
+    }
+
+    valores.forEach(v => {
+      let idx = Math.floor((v - min) / anchoBin);
+      if (idx >= bins.length) idx = bins.length - 1;
+      if (idx < 0) idx = 0;
+      bins[idx].conteo++;
+    });
+
+    return bins;
+  }
+
+  function renderizar() {
+    const valores = respuestas.map(r => r.valor);
+    const n = valores.length;
+    const mediana = calcularMediana(valores);
+    const promedio = calcularPromedio(valores);
+
+    document.getElementById("numRespuestas").textContent = n;
+    document.getElementById("mediana").textContent = mediana.toFixed(2) + "%";
+    document.getElementById("promedio").textContent = promedio.toFixed(2) + "%";
+
+    const bins = construirHistograma(valores);
+    const maxConteo = Math.max(...bins.map(b => b.conteo), 1);
+    const contenedor = document.getElementById("histograma");
+    contenedor.innerHTML = "";
+
+    bins.forEach(bin => {
+      const fila = document.createElement("div");
+      fila.className = "hist-fila";
+
+      const etiqueta = document.createElement("div");
+      etiqueta.className = "hist-etiqueta";
+      etiqueta.textContent = bin.inicio.toFixed(1) + "–" + bin.fin.toFixed(1) + "%";
+
+      const barraContenedor = document.createElement("div");
+      barraContenedor.className = "hist-barra-contenedor";
+
+      const barra = document.createElement("div");
+      barra.className = "hist-barra";
+      const porcentajeAncho = (bin.conteo / maxConteo) * 100;
+      barra.style.width = porcentajeAncho + "%";
+
+      if (bin.conteo > 0) {
+        const count = document.createElement("span");
+        count.className = "hist-count";
+        count.textContent = bin.conteo;
+        barra.appendChild(count);
+      }
+
+      barraContenedor.appendChild(barra);
+      fila.appendChild(etiqueta);
+      fila.appendChild(barraContenedor);
+      contenedor.appendChild(fila);
+    });
+  }
+
+  formulario.addEventListener("submit", function (evento) {
+    evento.preventDefault();
+
+    const valorNumerico = parseFloat(inputValor.value);
+    if (Number.isNaN(valorNumerico)) {
+      mensaje.textContent = "Ingresa un número válido.";
+      return;
+    }
+
+    const aliasTexto = inputAlias.value.trim() || "Anónimo";
+
+    respuestas.push({ alias: aliasTexto, valor: valorNumerico });
+
+    mensaje.textContent = "¡Gracias por tu respuesta!";
+    formulario.reset();
+    renderizar();
+  });
+
+  renderizar();
+</script>
+</body>
+</html>
