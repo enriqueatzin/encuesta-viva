@@ -186,31 +186,17 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-  const RESPUESTAS_INICIALES = [
-    { alias: "Ana",      valor: 4.1 },
-    { alias: "Luis",     valor: 3.8 },
-    { alias: "Mariana",  valor: 4.5 },
-    { alias: "Carlos",   valor: 5.0 },
-    { alias: "Diana",    valor: 4.2 },
-    { alias: "Jorge",    valor: 3.6 },
-    { alias: "Paola",    valor: 4.8 },
-    { alias: "Anónimo",  valor: 4.3 },
-    { alias: "Sofía",    valor: 5.3 },
-    { alias: "Ricardo",  valor: 4.0 },
-    { alias: "Valeria",  valor: 3.9 },
-    { alias: "Anónimo",  valor: 4.6 },
-    { alias: "Héctor",   valor: 4.4 },
-    { alias: "Fernanda", valor: 5.1 },
-    { alias: "Anónimo",  valor: 3.7 },
-    { alias: "Ismael",   valor: 4.2 },
-    { alias: "Renata",   valor: 4.9 },
-    { alias: "Pablo",    valor: 4.1 },
-    { alias: "Camila",   valor: 5.5 },
-    { alias: "Anónimo",  valor: 4.3 }
-  ];
+  const PREGUNTA = "¿Cuál será la inflación anual de México en septiembre de 2026, según INEGI?";
+  const SUPABASE_URL = "https://csugkplqtyzvwfoqwvvz.supabase.co";
+  // La llave "publishable" está pensada para ir en el cliente: es pública a propósito,
+  // el acceso a los datos se controla con políticas RLS en Supabase, no ocultando esta llave.
+  const SUPABASE_KEY = "sb_publishable_c60N-Z727o9V8ci3FqJHDA_HfSBFc-0";
 
-  let respuestas = [...RESPUESTAS_INICIALES];
+  const clienteSupabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let respuestas = [];
 
   const formulario = document.getElementById("formulario");
   const inputAlias = document.getElementById("alias");
@@ -255,16 +241,26 @@
   function renderizar() {
     const valores = respuestas.map(r => r.valor);
     const n = valores.length;
+
+    document.getElementById("numRespuestas").textContent = n;
+
+    const contenedor = document.getElementById("histograma");
+
+    if (n === 0) {
+      document.getElementById("mediana").textContent = "–";
+      document.getElementById("promedio").textContent = "–";
+      contenedor.innerHTML = "";
+      return;
+    }
+
     const mediana = calcularMediana(valores);
     const promedio = calcularPromedio(valores);
 
-    document.getElementById("numRespuestas").textContent = n;
     document.getElementById("mediana").textContent = mediana.toFixed(2) + "%";
     document.getElementById("promedio").textContent = promedio.toFixed(2) + "%";
 
     const bins = construirHistograma(valores);
     const maxConteo = Math.max(...bins.map(b => b.conteo), 1);
-    const contenedor = document.getElementById("histograma");
     contenedor.innerHTML = "";
 
     bins.forEach(bin => {
@@ -297,7 +293,23 @@
     });
   }
 
-  formulario.addEventListener("submit", function (evento) {
+  async function cargarRespuestas() {
+    const { data, error } = await clienteSupabase
+      .from("respuestas")
+      .select("alias, valor")
+      .eq("pregunta", PREGUNTA);
+
+    if (error) {
+      console.error(error);
+      mensaje.textContent = "No se pudieron cargar las respuestas.";
+      return;
+    }
+
+    respuestas = data;
+    renderizar();
+  }
+
+  formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault();
 
     const valorNumerico = parseFloat(inputValor.value);
@@ -308,14 +320,23 @@
 
     const aliasTexto = inputAlias.value.trim() || "Anónimo";
 
-    respuestas.push({ alias: aliasTexto, valor: valorNumerico });
+    const { error } = await clienteSupabase
+      .from("respuestas")
+      .insert({ pregunta: PREGUNTA, alias: aliasTexto, valor: valorNumerico });
+
+    if (error) {
+      console.error(error);
+      mensaje.textContent = "No se pudo enviar tu respuesta.";
+      return;
+    }
 
     mensaje.textContent = "¡Gracias por tu respuesta!";
     formulario.reset();
-    renderizar();
+    await cargarRespuestas();
   });
 
-  renderizar();
+  cargarRespuestas();
+  setInterval(cargarRespuestas, 5000);
 </script>
 </body>
 </html>
