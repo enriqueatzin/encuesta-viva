@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Encuesta de inflación</title>
+<title>Encuesta de tipo de cambio</title>
 <style>
   :root {
     --bg: #0f1115;
@@ -148,7 +148,7 @@
 </head>
 <body>
 <div class="container">
-  <h1>¿Cuál será la inflación anual de México en septiembre de 2026, según INEGI?</h1>
+  <h1>¿A cuántos pesos por dólar cerrará el tipo de cambio FIX el 31 de diciembre de 2026?</h1>
 
   <div class="card">
     <form id="formulario">
@@ -157,8 +157,8 @@
         <input type="text" id="alias" placeholder="Anónimo">
       </div>
       <div class="field">
-        <label for="valor">Tu estimación (% anual)</label>
-        <input type="number" id="valor" step="0.1" required placeholder="Ej. 4.2">
+        <label for="valor">Tu estimación (pesos por dólar)</label>
+        <input type="number" id="valor" step="0.01" required placeholder="Ej. 19.50">
       </div>
       <button type="submit">Enviar</button>
       <div id="mensaje"></div>
@@ -188,7 +188,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-  const PREGUNTA = "¿Cuál será la inflación anual de México en septiembre de 2026, según INEGI?";
+  const PREGUNTA = "¿A cuántos pesos por dólar cerrará el tipo de cambio FIX el 31 de diciembre de 2026?";
   const SUPABASE_URL = "https://csugkplqtyzvwfoqwvvz.supabase.co";
   // La llave "publishable" está pensada para ir en el cliente: es pública a propósito,
   // el acceso a los datos se controla con políticas RLS en Supabase, no ocultando esta llave.
@@ -256,8 +256,8 @@
     const mediana = calcularMediana(valores);
     const promedio = calcularPromedio(valores);
 
-    document.getElementById("mediana").textContent = mediana.toFixed(2) + "%";
-    document.getElementById("promedio").textContent = promedio.toFixed(2) + "%";
+    document.getElementById("mediana").textContent = "$" + mediana.toFixed(2);
+    document.getElementById("promedio").textContent = "$" + promedio.toFixed(2);
 
     const bins = construirHistograma(valores);
     const maxConteo = Math.max(...bins.map(b => b.conteo), 1);
@@ -269,7 +269,7 @@
 
       const etiqueta = document.createElement("div");
       etiqueta.className = "hist-etiqueta";
-      etiqueta.textContent = bin.inicio.toFixed(1) + "–" + bin.fin.toFixed(1) + "%";
+      etiqueta.textContent = "$" + bin.inicio.toFixed(1) + "–" + bin.fin.toFixed(1);
 
       const barraContenedor = document.createElement("div");
       barraContenedor.className = "hist-barra-contenedor";
